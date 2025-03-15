@@ -5,10 +5,20 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 import face_recognition
 import os
+import json
+
+# Đọc credentials từ biến môi trường
+credentials_json = os.getenv('GOOGLE_CREDENTIALS')
+if not credentials_json:
+    raise ValueError("Không tìm thấy GOOGLE_CREDENTIALS trong biến môi trường.")
+
+# Lưu tạm credentials vào file
+with open('temp_credentials.json', 'w') as f:
+    f.write(credentials_json)
 
 # Thiết lập Google Drive và Sheets API
 SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
-creds = service_account.Credentials.from_service_account_file('credentials.json', scopes=SCOPES)
+creds = service_account.Credentials.from_service_account_file('temp_credentials.json', scopes=SCOPES)
 drive_service = build('drive', 'v3', credentials=creds)
 sheets_service = build('sheets', 'v4', credentials=creds)
 
@@ -60,7 +70,7 @@ def recognize_and_update():
                         break
             
             # Cập nhật Google Sheets
-            result = sheets_service.spreadsheets().values().get(spreadsheetId=sheet_id, range='CHAMCONG!A2:E').execute()
+            result = sheets_service.spreadsheets().values().get(spreadsheetId=sheet_id, range='CHAMCONG!A2:F').execute()
             rows = result.get('values', [])
             for i, row in enumerate(rows):
                 if row[4] == f'https://drive.google.com/open?id={file_id}':
@@ -69,9 +79,9 @@ def recognize_and_update():
                     verification = 'Hợp lệ' if distance <= 30 else 'Không hợp lệ'
                     sheets_service.spreadsheets().values().update(
                         spreadsheetId=sheet_id,
-                        range=f'CHAMCONG!A{i+2}:E{i+2}',
+                        range=f'CHAMCONG!A{i+2}:F{i+2}',
                         valueInputOption='RAW',
-                        body={'values': [[name, row[1], row[2], verification, row[4]]]}
+                        body={'values': [[name, row[1], row[2], verification, row[4], 'Hoàn tất']]}
                     ).execute()
                     break
             
@@ -91,3 +101,4 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 
 if __name__ == '__main__':
     recognize_and_update()
+    os.remove('temp_credentials.json')  # Xóa file tạm sau khi dùng
