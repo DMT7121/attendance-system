@@ -1,0 +1,21 @@
+name: Face Recognition Workflow
+on:
+  repository_dispatch:
+    types: [new-image]
+
+jobs:
+  recognize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: |
+          pip install opencv-python face_recognition google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+      - name: Run recognition script
+        run: python recognize.py
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
